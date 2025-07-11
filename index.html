@@ -179,14 +179,7 @@
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Config ---
-        const firebaseConfig = {
-  apiKey: "AIzaSyB4FeTJR9xrWs3xh48bYy7aIfbtUcSGudE",
-  authDomain: "brand-blitz-online.firebaseapp.com",
-  projectId: "brand-blitz-online",
-  storageBucket: "brand-blitz-online.firebasestorage.app",
-  messagingSenderId: "197236668233",
-  appId: "1:197236668233:web:c245ccd21525f0846b4c98"
-}; // PASTE YOUR FIREBASE CONFIG HERE
+        const firebaseConfig = {  apiKey: "AIzaSyB4FeTJR9xrWs3xh48bYy7aIfbtUcSGudE",  authDomain: "brand-blitz-online.firebaseapp.com",  projectId: "brand-blitz-online",  storageBucket: "brand-blitz-online.firebasestorage.app",  messagingSenderId: "197236668233",  appId: "1:197236668233:web:c245ccd21525f0846b4c98"};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'topic-tussle-default';
 
         // --- Firebase Initialization ---
@@ -284,7 +277,6 @@
 
         // --- AI Question Generation (Client Side) ---
         async function generateQuestions(topic, audience, age, difficulty) {
-            // This function now calls our secure middleman (Netlify Function)
             const functionUrl = '/.netlify/functions/generate-quiz';
             
             try {
@@ -678,4 +670,4 @@
 
     </script>
 </body>
-</html>
+</ht
