@@ -504,7 +504,7 @@
         
         function renderRoundEnd(gameData) {
             roundEndTitle.textContent = `Round ${gameData.currentRound} Complete!`;
-            const sortedPlayers = Object.values(players).sort((a, b) => b.score - a.score);
+            const sortedPlayers = Object.values(gameData.players).sort((a, b) => b.score - a.score);
             roundEndLeaderboard.innerHTML = sortedPlayers.map((p, index) => `
                 <div class="flex items-center justify-between glass-card p-4 rounded-lg">
                     <span class="text-2xl font-bold">${index + 1}.</span>
@@ -698,4 +698,4 @@
 
     </script>
 </body>
-</html>
+</ht
