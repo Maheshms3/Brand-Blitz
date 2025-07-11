@@ -137,6 +137,14 @@
             </div>
         </div>
 
+        <!-- Round Start Screen -->
+        <div id="round-start-screen" class="screen">
+            <div class="glass-card rounded-2xl p-8 text-center">
+                <h2 id="round-start-title" class="text-4xl font-bold">Get Ready for Round 2!</h2>
+                <p class="text-2xl mt-4" id="round-start-timer">3</p>
+            </div>
+        </div>
+
         <!-- Round End Screen -->
         <div id="round-end-screen" class="screen">
             <div class="glass-card rounded-2xl p-8 text-center">
@@ -190,14 +198,7 @@
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Config ---
-        const firebaseConfig = {
-  apiKey: "AIzaSyB4FeTJR9xrWs3xh48bYy7aIfbtUcSGudE",
-  authDomain: "brand-blitz-online.firebaseapp.com",
-  projectId: "brand-blitz-online",
-  storageBucket: "brand-blitz-online.firebasestorage.app",
-  messagingSenderId: "197236668233",
-  appId: "1:197236668233:web:c245ccd21525f0846b4c98"
-}; // PASTE YOUR FIREBASE CONFIG HERE
+        const firebaseConfig = {}; // PASTE YOUR FIREBASE CONFIG HERE
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'topic-tussle-default';
 
         // --- Firebase Initialization ---
@@ -212,6 +213,7 @@
         const createGameOptionsScreen = document.getElementById('create-game-options-screen');
         const loadingScreen = document.getElementById('loading-screen');
         const lobbyScreen = document.getElementById('lobby-screen');
+        const roundStartScreen = document.getElementById('round-start-screen');
         const roundEndScreen = document.getElementById('round-end-screen');
         const gameScreen = document.getElementById('game-screen');
         const endScreen = document.getElementById('end-screen');
@@ -234,6 +236,8 @@
         const loadingMessage = document.getElementById('loading-message');
         const loadingTimer = document.getElementById('loading-timer');
 
+        const roundStartTitle = document.getElementById('round-start-title');
+        const roundStartTimer = document.getElementById('round-start-timer');
         const roundCounter = document.getElementById('round-counter');
         const questionCounter = document.getElementById('question-counter');
         const timerBar = document.getElementById('timer-bar');
@@ -253,6 +257,7 @@
         let currentGameId = null;
         let unsubscribeGame = null;
         let timerInterval;
+        let isNewRound = false;
         const TOTAL_ROUNDS = 3;
         const QUESTIONS_PER_ROUND = 5;
 
@@ -456,27 +461,54 @@
         }
 
         function updateUI(gameData) {
-            switch (gameData.gameState) {
-                case 'lobby':
-                    switchScreen('lobby-screen');
-                    roomCodeDisplay.textContent = currentGameId;
-                    playerList.innerHTML = Object.values(gameData.players).map(p => `<div class="glass-card rounded-lg p-2">${p.name}</div>`).join('');
-                    startGameBtn.style.display = gameData.hostId === currentUser.uid ? 'block' : 'none';
-                    break;
-                case 'playing':
+            const questionIndexInRound = gameData.currentQuestionIndex % QUESTIONS_PER_ROUND;
+            
+            if (gameData.gameState === 'playing' && questionIndexInRound === 0 && gameData.currentQuestionIndex > 0) {
+                if (!isNewRound) {
+                    isNewRound = true;
+                    showRoundStartCountdown(gameData);
+                }
+            } else {
+                isNewRound = false;
+                switch (gameData.gameState) {
+                    case 'lobby':
+                        switchScreen('lobby-screen');
+                        roomCodeDisplay.textContent = currentGameId;
+                        playerList.innerHTML = Object.values(gameData.players).map(p => `<div class="glass-card rounded-lg p-2">${p.name}</div>`).join('');
+                        startGameBtn.style.display = gameData.hostId === currentUser.uid ? 'block' : 'none';
+                        break;
+                    case 'playing':
+                        switchScreen('game-screen');
+                        renderQuestion(gameData);
+                        renderLeaderboard(gameData.players);
+                        break;
+                    case 'round-end':
+                        switchScreen('round-end-screen');
+                        renderRoundEnd(gameData);
+                        break;
+                    case 'finished':
+                        switchScreen('end-screen');
+                        renderFinalRankings(gameData.players);
+                        break;
+                }
+            }
+        }
+
+        function showRoundStartCountdown(gameData) {
+            switchScreen('round-start-screen');
+            roundStartTitle.textContent = `Get Ready for Round ${gameData.currentRound}!`;
+            let countdown = 3;
+            roundStartTimer.textContent = countdown;
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                roundStartTimer.textContent = countdown;
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
                     switchScreen('game-screen');
                     renderQuestion(gameData);
                     renderLeaderboard(gameData.players);
-                    break;
-                case 'round-end':
-                    switchScreen('round-end-screen');
-                    renderRoundEnd(gameData);
-                    break;
-                case 'finished':
-                    switchScreen('end-screen');
-                    renderFinalRankings(gameData.players);
-                    break;
-            }
+                }
+            }, 1000);
         }
 
         function renderQuestion(gameData) {
