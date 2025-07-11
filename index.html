@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Blitz - Online Team Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #111827;
+            background-image: radial-gradient(circle at top right, #4f46e5, transparent 40%), radial-gradient(circle at bottom left, #db2777, transparent 40%);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .timer-bar {
+            height: 8px;
+            background-color: #4ade80;
+            width: 100%;
+            transition: width 1s linear, background-color 0.5s;
+        }
+        .btn-option.correct { background-color: #22c55e !important; color: white !important; border-color: #16a34a !important; }
+        .btn-option.incorrect { background-color: #ef4444 !important; color: white !important; border-color: #dc2626 !important; }
+        .disabled-options { pointer-events: none; }
+        .screen { display: none; }
+        .active-screen { display: block; }
+        #confetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+          10%, 90% { transform: translate3d(-1px, 0, 0); }
+          20%, 80% { transform: translate3d(2px, 0, 0); }
+          30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+          40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+    </style>
+</head>
+<body class="text-white flex items-center justify-center min-h-screen p-4">
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <div id="game-container" class="w-full max-w-4xl mx-auto">
+
+        <!-- Home Screen -->
+        <div id="home-screen" class="screen active-screen text-center">
+            <div class="glass-card rounded-2xl p-8">
+                <h1 class="text-5xl md:text-6xl font-bold">Brand Blitz</h1>
+                <p class="text-indigo-300 mt-2 text-lg">The Ultimate Marketing Quiz Game</p>
+                <div class="mt-8 space-y-4">
+                    <input type="text" id="player-name" placeholder="Enter your name" class="w-full text-center bg-gray-900/50 border-2 border-gray-600 rounded-lg p-3 focus:border-indigo-500 focus:ring-0">
+                    <button id="create-game-btn" class="btn w-full bg-indigo-600 font-bold py-3 rounded-lg text-xl">Create Game Room</button>
+                    <div class="flex items-center gap-4">
+                        <input type="text" id="room-code-input" placeholder="Enter Room Code" class="flex-grow text-center bg-gray-900/50 border-2 border-gray-600 rounded-lg p-3 focus:border-pink-500 focus:ring-0">
+                        <button id="join-game-btn" class="btn bg-pink-600 font-bold py-3 px-6 rounded-lg text-xl">Join</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lobby Screen -->
+        <div id="lobby-screen" class="screen">
+            <div class="glass-card rounded-2xl p-8 text-center">
+                <p class="text-gray-400">Game Lobby</p>
+                <h2 class="text-4xl font-bold">Room Code: <span id="room-code-display" class="text-pink-400 font-mono cursor-pointer" title="Click to copy"></span></h2>
+                <p id="copy-feedback" class="text-sm text-green-400 h-5"></p>
+                <h3 class="text-2xl mt-6 mb-4">Players Joined:</h3>
+                <div id="player-list" class="grid grid-cols-2 md:grid-cols-4 gap-4 min-h-[50px]"></div>
+                <button id="start-game-btn" class="btn w-full bg-indigo-600 font-bold py-3 rounded-lg text-xl mt-8">Start Game</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Main Question Area -->
+                <div class="w-full md:w-2/3 glass-card rounded-2xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <p class="text-gray-300">Question <span id="question-counter">1</span>/<span id="total-questions">10</span></p>
+                        <div class="flex items-center gap-2 text-yellow-400 font-bold">
+                           <span id="streak-counter"></span> 🔥
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full mb-6"><div id="timer-bar" class="timer-bar rounded-full"></div></div>
+                    <div class="mb-6 min-h-[120px] flex items-center justify-center">
+                        <h2 id="question-text" class="text-2xl md:text-3xl font-semibold text-center"></h2>
+                    </div>
+                    <div id="options-container" class="grid grid-cols-1 gap-4"></div>
+                </div>
+                <!-- Leaderboard & Power-ups -->
+                <div class="w-full md:w-1/3 glass-card rounded-2xl p-6">
+                    <h3 class="text-2xl font-bold mb-4 text-center">Leaderboard</h3>
+                    <div id="leaderboard" class="space-y-2 mb-6"></div>
+                    <h3 class="text-2xl font-bold mb-4 text-center">Power-ups</h3>
+                    <div id="power-ups" class="flex justify-center gap-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- End Screen -->
+        <div id="end-screen" class="screen text-center">
+             <div class="glass-card rounded-2xl p-8">
+                <h2 class="text-5xl font-bold">Game Over!</h2>
+                <p class="text-2xl text-indigo-300 mt-4">Final Rankings:</p>
+                <div id="final-rankings" class="space-y-3 mt-6"></div>
+                <button id="play-again-btn" class="btn w-full bg-indigo-600 font-bold py-3 rounded-lg text-xl mt-8">Back to Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Config ---
+        // PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
+        const firebaseConfig =  {
+  apiKey: "AIzaSyB4FeTJR9xrWs3xh48bYy7aIfbtUcSGudE",
+  authDomain: "brand-blitz-online.firebaseapp.com",
+  projectId: "brand-blitz-online",
+  storageBucket: "brand-blitz-online.firebasestorage.app",
+  messagingSenderId: "197236668233",
+  appId: "1:197236668233:web:c245ccd21525f0846b4c98"
+}; 
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'brand-blitz-default';
+
+        // --- Firebase Initialization ---
+        // Declare variables in global scope
+        let app;
+        let db;
+        let auth;
+
+        // --- DOM Elements ---
+        const allScreens = document.querySelectorAll('.screen');
+        const homeScreen = document.getElementById('home-screen');
+        const lobbyScreen = document.getElementById('lobby-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const endScreen = document.getElementById('end-screen');
+        const gameContainer = document.getElementById('game-container');
+        
+        const playerNameInput = document.getElementById('player-name');
+        const createGameBtn = document.getElementById('create-game-btn');
+        const joinGameBtn = document.getElementById('join-game-btn');
+        const roomCodeInput = document.getElementById('room-code-input');
+        const roomCodeDisplay = document.getElementById('room-code-display');
+        const copyFeedback = document.getElementById('copy-feedback');
+        const playerList = document.getElementById('player-list');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const playAgainBtn = document.getElementById('play-again-btn');
+
+        const questionCounter = document.getElementById('question-counter');
+        const totalQuestionsElem = document.getElementById('total-questions');
+        const timerBar = document.getElementById('timer-bar');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const leaderboard = document.getElementById('leaderboard');
+        const streakCounter = document.getElementById('streak-counter');
+        const powerUpsContainer = document.getElementById('power-ups');
+
+        const finalRankings = document.getElementById('final-rankings');
+        
+        const confettiCanvas = document.getElementById('confetti-canvas');
+        const confettiCtx = confettiCanvas.getContext('2d');
+        let confettiParticles = [];
+
+        // --- Game State ---
+        let currentUser = null;
+        let currentGameId = null;
+        let unsubscribeGame = null;
+        let timerInterval;
+        let localPlayerState = { hasAnswered: false, streak: 0, powerUps: 0 };
+        
+        const questions = [
+            { question: "Which Indian brand's tagline is 'The Taste of India'?", options: ["Haldiram's", "Amul", "Britannia"], answer: "Amul" },
+            { question: "The 'Just Do It' slogan belongs to which global sportswear giant?", options: ["Adidas", "Puma", "Nike"], answer: "Nike" },
+            { question: "In marketing, what does 'USP' stand for?", options: ["Unique Selling Proposition", "Universal Service Protocol", "User Satisfaction Point"], answer: "Unique Selling Proposition" },
+            { question: "The 'ZooZoos' were iconic ad characters for which telecom brand in India?", options: ["Airtel", "Jio", "Vodafone"], answer: "Vodafone" },
+            { question: "'Har Ghar Kuch Kehta Hai' is a famous tagline for which company?", options: ["Berger Paints", "Dulux", "Asian Paints"], answer: "Asian Paints" },
+            { question: "A low introductory price to gain market share is known as what type of pricing?", options: ["Skimming", "Penetration", "Prestige"], answer: "Penetration" },
+            { question: "Which car brand is known for its 'The Ultimate Driving Machine' slogan?", options: ["Mercedes-Benz", "BMW", "Audi"], answer: "BMW" },
+            { question: "The 'Share a Coke' campaign was a successful example of what type of marketing?", options: ["Guerilla Marketing", "Personalization Marketing", "Ambush Marketing"], answer: "Personalization Marketing" },
+            { question: "What does 'SEO' stand for in digital marketing?", options: ["Sales Engine Optimization", "Search Engine Optimization", "Social Engagement Office"], answer: "Search Engine Optimization" },
+            { question: "A 'Freemium' business model offers basic services for free and charges for advanced features. Which is a prime example?", options: ["Netflix", "Spotify", "Amazon Prime"], answer: "Spotify" }
+        ];
+
+        // --- Main Functions ---
+        async function main() {
+            // Check for Firebase config first
+            if (Object.keys(firebaseConfig).length === 0) {
+                alert("Firebase configuration is missing! Please follow the deployment guide to set it up.");
+                document.body.innerHTML = '<h1 style="color: red; text-align: center; margin-top: 50px;">FIREBASE CONFIGURATION MISSING</h1>';
+                return;
+            }
+
+            // Initialize Firebase only if config exists
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            await signInAnonymously(auth);
+            onAuthStateChanged(auth, user => {
+                if (user) {
+                    currentUser = user;
+                } else {
+                    console.log("No user signed in.");
+                }
+            });
+        }
+
+        function switchScreen(screenId) {
+            allScreens.forEach(s => s.classList.remove('active-screen'));
+            document.getElementById(screenId).classList.add('active-screen');
+        }
+
+        function generateRoomCode() {
+            return Math.random().toString(36).substring(2, 7).toUpperCase();
+        }
+
+        function validatePlayerName() {
+            const playerName = playerNameInput.value.trim();
+            if (!playerName) {
+                alert("Please enter your name!");
+                return null;
+            }
+            return playerName;
+        }
+
+        // --- Game Creation & Joining ---
+        createGameBtn.onclick = async () => {
+            const playerName = validatePlayerName();
+            if (!playerName || !currentUser) return;
+
+            const gameId = generateRoomCode();
+            currentGameId = gameId;
+            const gameRef = doc(db, `artifacts/${appId}/public/data/brand-blitz-games`, gameId);
+            
+            const shuffledQuestions = questions.sort(() => 0.5 - Math.random()).slice(0, 10);
+
+            const gameData = {
+                hostId: currentUser.uid,
+                players: {
+                    [currentUser.uid]: { name: playerName, score: 0, streak: 0, powerUps: 0 }
+                },
+                questions: shuffledQuestions,
+                currentQuestionIndex: -1, // -1 for lobby
+                gameState: 'lobby', // lobby, playing, finished
+                createdAt: new Date(),
+            };
+
+            await setDoc(gameRef, gameData);
+            subscribeToGame(gameId);
+            switchScreen('lobby-screen');
+        };
+
+        joinGameBtn.onclick = async () => {
+            const playerName = validatePlayerName();
+            const roomCode = roomCodeInput.value.trim().toUpperCase();
+            if (!playerName || !roomCode || !currentUser) {
+                alert("Please enter your name and a valid room code.");
+                return;
+            }
+
+            const gameRef = doc(db, `artifacts/${appId}/public/data/brand-blitz-games`, roomCode);
+            const gameSnap = await getDoc(gameRef);
+
+            if (gameSnap.exists()) {
+                currentGameId = roomCode;
+                await updateDoc(gameRef, {
+                    [`players.${currentUser.uid}`]: { name: playerName, score: 0, streak: 0, powerUps: 0 }
+                });
+                subscribeToGame(roomCode);
+                switchScreen('lobby-screen');
+            } else {
+                alert("Game room not found!");
+            }
+        };
+
+        startGameBtn.onclick = async () => {
+            if (!currentGameId) return;
+            const gameRef = doc(db, `artifacts/${appId}/public/data/brand-blitz-games`, currentGameId);
+            await updateDoc(gameRef, { gameState: 'playing', currentQuestionIndex: 0 });
+        };
+
+        playAgainBtn.onclick = () => {
+            if (unsubscribeGame) unsubscribeGame();
+            currentGameId = null;
+            localPlayerState = { hasAnswered: false, streak: 0, powerUps: 0 };
+            switchScreen('home-screen');
+        };
+        
+        roomCodeDisplay.onclick = () => {
+            navigator.clipboard.writeText(roomCodeDisplay.innerText).then(() => {
+                copyFeedback.innerText = "Copied!";
+                setTimeout(() => copyFeedback.innerText = "", 2000);
+            });
+        };
+
+        // --- Real-time Subscription ---
+        function subscribeToGame(gameId) {
+            if (unsubscribeGame) unsubscribeGame();
+            const gameRef = doc(db, `artifacts/${appId}/public/data/brand-blitz-games`, gameId);
+            unsubscribeGame = onSnapshot(gameRef, (doc) => {
+                const gameData = doc.data();
+                if (!gameData) {
+                    alert("The game room no longer exists.");
+                    playAgainBtn.click();
+                    return;
+                }
+                updateUI(gameData);
+            });
+        }
+
+        // --- UI Updates ---
+        function updateUI(gameData) {
+            // Update based on gameState
+            if (gameData.gameState === 'lobby') {
+                switchScreen('lobby-screen');
+                roomCodeDisplay.textContent = currentGameId;
+                playerList.innerHTML = Object.values(gameData.players).map(p => `<div class="glass-card rounded-lg p-2">${p.name}</div>`).join('');
+                startGameBtn.style.display = gameData.hostId === currentUser.uid ? 'block' : 'none';
+            } else if (gameData.gameState === 'playing') {
+                switchScreen('game-screen');
+                renderQuestion(gameData);
+                renderLeaderboard(gameData.players);
+                renderPowerUps(gameData.players[currentUser.uid]);
+            } else if (gameData.gameState === 'finished') {
+                switchScreen('end-screen');
+                renderFinalRankings(gameData.players);
+            }
+        }
+
+        function renderQuestion(gameData) {
+            const question = gameData.questions[gameData.currentQuestionIndex];
+            if (!question) return;
+
+            if (questionText.dataset.question !== question.question) {
+                localPlayerState.hasAnswered = false;
+                optionsContainer.classList.remove('disabled-options');
+                questionText.dataset.question = question.question;
+                
+                questionCounter.textContent = gameData.currentQuestionIndex + 1;
+                totalQuestionsElem.textContent = gameData.questions.length;
+                questionText.textContent = question.question;
+
+                optionsContainer.innerHTML = '';
+                const shuffledOptions = [...question.options].sort(() => Math.random() - 0.5);
+                shuffledOptions.forEach(opt => {
+                    const button = document.createElement('button');
+                    button.textContent = opt;
+                    button.classList.add('btn', 'btn-option', 'w-full', 'border-2', 'border-gray-500', 'font-semibold', 'py-3', 'px-4', 'rounded-lg', 'text-lg');
+                    button.onclick = selectAnswer;
+                    optionsContainer.appendChild(button);
+                });
+                
+                startTimer(gameData);
+            }
+        }
+        
+        function renderLeaderboard(players) {
+            const sortedPlayers = Object.values(players).sort((a,b) => b.score - a.score);
+            leaderboard.innerHTML = sortedPlayers.map(p => `
+                <div class="flex justify-between items-center glass-card p-2 rounded-md">
+                    <span>${p.name}</span>
+                    <span class="font-bold text-lg">${p.score}</span>
+                </div>
+            `).join('');
+        }
+        
+        function renderPowerUps(player) {
+            localPlayerState.powerUps = player.powerUps;
+            streakCounter.textContent = player.streak > 1 ? `${player.streak}x` : '';
+            powerUpsContainer.innerHTML = `
+                <button id="power-up-5050" class="btn text-sm bg-pink-600 rounded-full w-20 h-20 flex flex-col items-center justify-center ${player.powerUps > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${player.powerUps > 0 ? '' : 'disabled'}>
+                    <span class="text-2xl font-bold">50:50</span>
+                    <span class="text-xs">(${player.powerUps} left)</span>
+                </button>
+            `;
+            if (player.powerUps > 0) {
+                document.getElementById('power-up-5050').onclick = use5050PowerUp;
+            }
+        }
+
+        function renderFinalRankings(players) {
+            const sortedPlayers = Object.values(players).sort((a, b) => b.score - a.score);
+            finalRankings.innerHTML = sortedPlayers.map((p, index) => `
+                <div class="flex items-center justify-between glass-card p-4 rounded-lg">
+                    <span class="text-2xl font-bold">${index + 1}.</span>
+                    <span class="text-xl">${p.name}</span>
+                    <span class="text-2xl font-bold text-indigo-300">${p.score} pts</span>
+                </div>
+            `).join('');
+        }
+
+        // --- Game Actions ---
+        function startTimer(gameData) {
+            clearInterval(timerInterval);
+            let timeLeft = 7;
+            timerBar.style.transition = 'none';
+            timerBar.style.width = '100%';
+            timerBar.style.backgroundColor = '#4ade80';
+
+            setTimeout(() => {
+                timerBar.style.transition = 'width 1s linear, background-color 0.5s';
+            }, 100);
+
+            timerInterval = setInterval(async () => {
+                timeLeft--;
+                timerBar.style.width = (timeLeft / 7) * 100 + '%';
+                if (timeLeft <= 3) timerBar.style.backgroundColor = '#facc15';
+                if (timeLeft <= 1) timerBar.style.backgroundColor = '#f87171';
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    if (gameData.hostId === currentUser.uid) {
+                        moveToNextQuestion(gameData);
+                    }
+                }
+            }, 1000);
+        }
+
+        async function selectAnswer(e) {
+            if (localPlayerState.hasAnswered) return;
+            localPlayerState.hasAnswered = true;
+            
+            clearInterval(timerInterval);
+            optionsContainer.classList.add('disabled-options');
+
+            const gameRef = doc(db, `artifacts/${appId}/public/data/brand-blitz-games`, currentGameId);
+            const gameSnap = await getDoc(gameRef);
+            const gameData = gameSnap.data();
+            const question = gameData.questions[gameData.currentQuestionIndex];
+            
+            const selectedButton = e.target;
+            const isCorrect = selectedButton.textContent === question.answer;
+
+            let scoreToAdd = 0;
+            let currentStreak = gameData.players[currentUser.uid].streak || 0;
+            let currentPowerUps = gameData.players[currentUser.uid].powerUps || 0;
+
+            if (isCorrect) {
+                selectedButton.classList.add('correct');
+                const timeLeft = parseFloat(timerBar.style.width) / 100;
+                scoreToAdd = 50 + Math.round(50 * timeLeft);
+                currentStreak++;
+                if (currentStreak > 1) {
+                    scoreToAdd *= (1 + (currentStreak - 1) * 0.1);
+                }
+                scoreToAdd = Math.round(scoreToAdd);
+                
+                if (currentStreak % 5 === 0) {
+                    currentPowerUps++;
+                }
+                
+                triggerConfetti();
+            } else {
+                selectedButton.classList.add('incorrect');
+                currentStreak = 0;
+                gameContainer.classList.add('shake');
+                setTimeout(() => gameContainer.classList.remove('shake'), 500);
+                 Array.from(optionsContainer.children).forEach(button => {
+                    if (button.textContent === question.answer) button.classList.add('correct');
+                });
+            }
+
+            const newScore = (gameData.players[currentUser.uid].score || 0) + scoreToAdd;
+            await updateDoc(gameRef, {
+                [`players.${currentUser.uid}.score`]: newScore,
+                [`players.${currentUser.uid}.streak`]: currentStreak,
+                [`players.${currentUser.uid}.powerUps`]: currentPowerUps
+            });
+            
+            if (gameData.hostId === currentUser.uid) {
+                setTimeout(() => moveToNextQuestion(gameData), 2000);
+            }
+        }
+        
+        async function moveToNextQuestion(gameData) {
+            const nextIndex = gameData.currentQuestionIndex + 1;
+            const gameRef = doc(db, `artifacts/${appId}/public/data/brand-blitz-games`, currentGameId);
+            if (nextIndex >= gameData.questions.length) {
+                await updateDoc(gameRef, { gameState: 'finished' });
+            } else {
+                await updateDoc(gameRef, { currentQuestionIndex: nextIndex });
+            }
+        }
+        
+        async function use5050PowerUp() {
+            if (localPlayerState.powerUps < 1 || localPlayerState.hasAnswered) return;
+            
+            localPlayerState.powerUps--;
+            const gameRef = doc(db, `artifacts/${appId}/public/data/brand-blitz-games`, currentGameId);
+            await updateDoc(gameRef, { [`players.${currentUser.uid}.powerUps`]: localPlayerState.powerUps });
+            
+            const gameSnap = await getDoc(gameRef);
+            const gameData = gameSnap.data();
+            const question = gameData.questions[gameData.currentQuestionIndex];
+            
+            const incorrectOptions = [...question.options].filter(opt => opt !== question.answer);
+            const optionToRemove = incorrectOptions[Math.floor(Math.random() * incorrectOptions.length)];
+            
+            Array.from(optionsContainer.children).forEach(button => {
+                if (button.textContent === optionToRemove) {
+                    button.style.opacity = '0.5';
+                    button.disabled = true;
+                }
+            });
+        }
+        
+        function triggerConfetti() {
+            confettiParticles = [];
+            for (let i = 0; i < 100; i++) {
+                confettiParticles.push({
+                    x: confettiCanvas.width / 2,
+                    y: confettiCanvas.height / 2,
+                    color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+                    radius: Math.random() * 3 + 2,
+                    vx: Math.random() * 10 - 5,
+                    vy: Math.random() * -15 - 5,
+                    alpha: 1
+                });
+            }
+            animateConfetti();
+        }
+
+        function animateConfetti() {
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+            confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            
+            let stillAnimating = false;
+            confettiParticles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.4;
+                p.alpha -= 0.02;
+
+                if (p.alpha > 0) {
+                    stillAnimating = true;
+                    confettiCtx.globalAlpha = p.alpha;
+                    confettiCtx.beginPath();
+                    confettiCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2, false);
+                    confettiCtx.fillStyle = p.color;
+                    confettiCtx.fill();
+                }
+            });
+
+            if (stillAnimating) {
+                requestAnimationFrame(animateConfetti);
+            } else {
+                confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            }
+        }
+
+        // --- Start Application ---
+        main();
+
+    </script>
+</body>
+</html>
