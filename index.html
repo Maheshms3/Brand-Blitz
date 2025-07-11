@@ -46,6 +46,17 @@
           30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
           40%, 60% { transform: translate3d(4px, 0, 0); }
         }
+        .winner-highlight {
+            position: relative;
+            border: 2px solid #fbbF24; /* A gold-like color */
+            box-shadow: 0 0 15px #fde047, 0 0 25px #f59e0b; /* Glowing effect */
+            animation: pulse-gold 1.5s infinite ease-in-out;
+        }
+        @keyframes pulse-gold {
+            0% { transform: scale(1); box-shadow: 0 0 15px #fde047, 0 0 25px #f59e0b; }
+            50% { transform: scale(1.02); box-shadow: 0 0 25px #fde047, 0 0 40px #f59e0b; }
+            100% { transform: scale(1); box-shadow: 0 0 15px #fde047, 0 0 25px #f59e0b; }
+        }
     </style>
 </head>
 <body class="text-white flex items-center justify-center min-h-screen p-4">
@@ -179,7 +190,14 @@
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Config ---
-        const firebaseConfig = {  apiKey: "AIzaSyB4FeTJR9xrWs3xh48bYy7aIfbtUcSGudE",  authDomain: "brand-blitz-online.firebaseapp.com",  projectId: "brand-blitz-online",  storageBucket: "brand-blitz-online.firebasestorage.app",  messagingSenderId: "197236668233",  appId: "1:197236668233:web:c245ccd21525f0846b4c98"};
+        const firebaseConfig = {
+  apiKey: "AIzaSyB4FeTJR9xrWs3xh48bYy7aIfbtUcSGudE",
+  authDomain: "brand-blitz-online.firebaseapp.com",
+  projectId: "brand-blitz-online",
+  storageBucket: "brand-blitz-online.firebasestorage.app",
+  messagingSenderId: "197236668233",
+  appId: "1:197236668233:web:c245ccd21525f0846b4c98"
+}; // PASTE YOUR FIREBASE CONFIG HERE
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'topic-tussle-default';
 
         // --- Firebase Initialization ---
@@ -277,6 +295,36 @@
 
         // --- AI Question Generation (Client Side) ---
         async function generateQuestions(topic, audience, age, difficulty) {
+            const prompt = `You are a quizmaster for a fast-paced, exciting trivia game called "Topic Tussle". Your goal is to create clever, tricky, and engaging questions.
+
+            **RULES:**
+            - The question text MUST be under 15 words.
+            - Each multiple-choice option MUST be under 5 words.
+            - The questions should be witty and designed to make players think fast. Focus on surprising facts or clever wordplay.
+            - Do not repeat questions.
+            - Ensure incorrect options are plausible but clearly wrong.
+
+            **QUIZ DETAILS:**
+            - Topic: ${topic}
+            - Target Audience: ${audience}
+            - Age Group: ${age}
+            - Difficulty: ${difficulty}
+
+            Generate ${QUESTIONS_PER_ROUND} questions based on these rules.`;
+
+            const schema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        question: { type: "STRING" },
+                        options: { type: "ARRAY", items: { type: "STRING" }, minItems: 3, maxItems: 3 },
+                        answer: { type: "STRING" }
+                    },
+                    required: ["question", "options", "answer"]
+                }
+            };
+
             const functionUrl = '/.netlify/functions/generate-quiz';
             
             try {
@@ -284,11 +332,8 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        topic,
-                        audience,
-                        age,
-                        difficulty,
-                        questionsPerRound: QUESTIONS_PER_ROUND
+                        prompt,
+                        schema
                     })
                 });
 
@@ -611,7 +656,7 @@
         function renderFinalRankings(players) {
             const sortedPlayers = Object.values(players).sort((a, b) => b.score - a.score);
             finalRankings.innerHTML = sortedPlayers.map((p, index) => `
-                <div class="flex items-center justify-between glass-card p-4 rounded-lg">
+                <div class="flex items-center justify-between glass-card p-4 rounded-lg ${index === 0 ? 'winner-highlight' : ''}">
                     <span class="text-2xl font-bold">${index + 1}.</span>
                     <span class="text-xl">${p.name}</span>
                     <span class="text-2xl font-bold text-indigo-300">${p.score} pts</span>
@@ -670,4 +715,4 @@
 
     </script>
 </body>
-</ht
+</html>
