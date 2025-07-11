@@ -57,6 +57,7 @@
         <!-- Home Screen -->
         <div id="home-screen" class="screen active-screen text-center">
             <div class="glass-card rounded-2xl p-8">
+                <div id="error-display" class="hidden bg-red-600/80 border border-red-500 text-white p-4 rounded-lg mb-6 text-left"></div>
                 <h1 class="text-5xl md:text-6xl font-bold">Brand Blitz</h1>
                 <p class="text-indigo-300 mt-2 text-lg">The Ultimate Marketing Quiz Game</p>
                 <div class="mt-8 space-y-4">
@@ -127,19 +128,10 @@
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Config ---
-        // PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
-        const firebaseConfig =  {
-  apiKey: "AIzaSyB4FeTJR9xrWs3xh48bYy7aIfbtUcSGudE",
-  authDomain: "brand-blitz-online.firebaseapp.com",
-  projectId: "brand-blitz-online",
-  storageBucket: "brand-blitz-online.firebasestorage.app",
-  messagingSenderId: "197236668233",
-  appId: "1:197236668233:web:c245ccd21525f0846b4c98"
-}; 
+        const firebaseConfig = {  apiKey: "AIzaSyB4FeTJR9xrWs3xh48bYy7aIfbtUcSGudE",  authDomain: "brand-blitz-online.firebaseapp.com",  projectId: "brand-blitz-online",  storageBucket: "brand-blitz-online.firebasestorage.app",  messagingSenderId: "197236668233",  appId: "1:197236668233:web:c245ccd21525f0846b4c98"};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'brand-blitz-default';
 
         // --- Firebase Initialization ---
-        // Declare variables in global scope
         let app;
         let db;
         let auth;
@@ -151,6 +143,7 @@
         const gameScreen = document.getElementById('game-screen');
         const endScreen = document.getElementById('end-screen');
         const gameContainer = document.getElementById('game-container');
+        const errorDisplay = document.getElementById('error-display');
         
         const playerNameInput = document.getElementById('player-name');
         const createGameBtn = document.getElementById('create-game-btn');
@@ -199,26 +192,41 @@
 
         // --- Main Functions ---
         async function main() {
-            // Check for Firebase config first
-            if (Object.keys(firebaseConfig).length === 0) {
-                alert("Firebase configuration is missing! Please follow the deployment guide to set it up.");
-                document.body.innerHTML = '<h1 style="color: red; text-align: center; margin-top: 50px;">FIREBASE CONFIGURATION MISSING</h1>';
+            if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.projectId) {
+                errorDisplay.classList.remove('hidden');
+                errorDisplay.innerHTML = `<strong>Configuration Error:</strong> Your Firebase config is missing. Please follow the deployment guide to add it.`;
                 return;
             }
 
-            // Initialize Firebase only if config exists
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
 
-            await signInAnonymously(auth);
-            onAuthStateChanged(auth, user => {
-                if (user) {
-                    currentUser = user;
-                } else {
-                    console.log("No user signed in.");
-                }
-            });
+            try {
+                await signInAnonymously(auth);
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        currentUser = user;
+                    } else {
+                        console.error("Anonymous sign-in failed. This should not happen if it's enabled.");
+                    }
+                });
+            } catch (error) {
+                console.error("Error during anonymous sign-in:", error);
+                errorDisplay.classList.remove('hidden');
+                errorDisplay.innerHTML = `
+                    <h3 class="font-bold">Connection Error! (auth/configuration-not-found)</h3>
+                    <p class="mt-2"><strong>How to Fix:</strong> This error means a required setting is turned off in your Firebase project.</p>
+                    <ol class="list-decimal list-inside text-left mt-2 space-y-1">
+                        <li>Go to your Firebase project console.</li>
+                        <li>On the left menu, click <strong>Build &rarr; Authentication</strong>.</li>
+                        <li>Click the <strong>"Sign-in method"</strong> tab at the top.</li>
+                        <li>Click on <strong>"Anonymous"</strong> in the list of providers.</li>
+                        <li>Click the <strong>Enable</strong> switch and then <strong>Save</strong>.</li>
+                    </ol>
+                    <p class="mt-2">After enabling it, refresh this page.</p>
+                `;
+            }
         }
 
         function switchScreen(screenId) {
@@ -242,7 +250,10 @@
         // --- Game Creation & Joining ---
         createGameBtn.onclick = async () => {
             const playerName = validatePlayerName();
-            if (!playerName || !currentUser) return;
+            if (!playerName || !currentUser) {
+                alert("Could not create room. Player is not signed in. Check for connection errors.");
+                return;
+            }
 
             const gameId = generateRoomCode();
             currentGameId = gameId;
@@ -256,21 +267,26 @@
                     [currentUser.uid]: { name: playerName, score: 0, streak: 0, powerUps: 0 }
                 },
                 questions: shuffledQuestions,
-                currentQuestionIndex: -1, // -1 for lobby
-                gameState: 'lobby', // lobby, playing, finished
+                currentQuestionIndex: -1,
+                gameState: 'lobby',
                 createdAt: new Date(),
             };
 
-            await setDoc(gameRef, gameData);
-            subscribeToGame(gameId);
-            switchScreen('lobby-screen');
+            try {
+                await setDoc(gameRef, gameData);
+                subscribeToGame(gameId);
+                switchScreen('lobby-screen');
+            } catch (error) {
+                console.error("Error creating game room:", error);
+                alert("Failed to create game room. Check Firestore rules and console for errors.");
+            }
         };
 
         joinGameBtn.onclick = async () => {
             const playerName = validatePlayerName();
             const roomCode = roomCodeInput.value.trim().toUpperCase();
             if (!playerName || !roomCode || !currentUser) {
-                alert("Please enter your name and a valid room code.");
+                alert("Please enter your name, a valid room code, and ensure you are signed in.");
                 return;
             }
 
@@ -279,11 +295,16 @@
 
             if (gameSnap.exists()) {
                 currentGameId = roomCode;
-                await updateDoc(gameRef, {
-                    [`players.${currentUser.uid}`]: { name: playerName, score: 0, streak: 0, powerUps: 0 }
-                });
-                subscribeToGame(roomCode);
-                switchScreen('lobby-screen');
+                try {
+                    await updateDoc(gameRef, {
+                        [`players.${currentUser.uid}`]: { name: playerName, score: 0, streak: 0, powerUps: 0 }
+                    });
+                    subscribeToGame(roomCode);
+                    switchScreen('lobby-screen');
+                } catch (error) {
+                    console.error("Error joining game:", error);
+                    alert("Failed to join game room. Check Firestore rules and console for errors.");
+                }
             } else {
                 alert("Game room not found!");
             }
@@ -303,13 +324,44 @@
         };
         
         roomCodeDisplay.onclick = () => {
-            navigator.clipboard.writeText(roomCodeDisplay.innerText).then(() => {
-                copyFeedback.innerText = "Copied!";
+            const textToCopy = roomCodeDisplay.innerText;
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            
+            // Make it invisible
+            textArea.style.position = "fixed";
+            textArea.style.top = 0;
+            textArea.style.left = 0;
+            textArea.style.width = "2em";
+            textArea.style.height = "2em";
+            textArea.style.padding = 0;
+            textArea.style.border = "none";
+            textArea.style.outline = "none";
+            textArea.style.boxShadow = "none";
+            textArea.style.background = "transparent";
+            
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    copyFeedback.innerText = "Copied!";
+                    setTimeout(() => copyFeedback.innerText = "", 2000);
+                } else {
+                    copyFeedback.innerText = "Copy failed!";
+                    setTimeout(() => copyFeedback.innerText = "", 2000);
+                }
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+                copyFeedback.innerText = "Copy failed!";
                 setTimeout(() => copyFeedback.innerText = "", 2000);
-            });
+            }
+            
+            document.body.removeChild(textArea);
         };
 
-        // --- Real-time Subscription ---
         function subscribeToGame(gameId) {
             if (unsubscribeGame) unsubscribeGame();
             const gameRef = doc(db, `artifacts/${appId}/public/data/brand-blitz-games`, gameId);
@@ -321,12 +373,13 @@
                     return;
                 }
                 updateUI(gameData);
+            }, (error) => {
+                console.error("Snapshot error:", error);
+                alert("Lost connection to the game.");
             });
         }
 
-        // --- UI Updates ---
         function updateUI(gameData) {
-            // Update based on gameState
             if (gameData.gameState === 'lobby') {
                 switchScreen('lobby-screen');
                 roomCodeDisplay.textContent = currentGameId;
@@ -405,7 +458,6 @@
             `).join('');
         }
 
-        // --- Game Actions ---
         function startTimer(gameData) {
             clearInterval(timerInterval);
             let timeLeft = 7;
@@ -461,7 +513,7 @@
                 }
                 scoreToAdd = Math.round(scoreToAdd);
                 
-                if (currentStreak % 5 === 0) {
+                if (currentStreak > 0 && currentStreak % 5 === 0) {
                     currentPowerUps++;
                 }
                 
