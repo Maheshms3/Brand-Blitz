@@ -63,10 +63,10 @@
                 <div class="mt-8 space-y-4">
                     <input type="text" id="player-name" placeholder="Enter your name" class="w-full text-center bg-gray-900/50 border-2 border-gray-600 rounded-lg p-3 focus:border-indigo-500 focus:ring-0">
                     <button id="show-create-options-btn" class="btn w-full bg-indigo-600 font-bold py-3 rounded-lg text-xl">Create Game Room</button>
-                    <<div class="flex flex-col sm:flex-row items-center gap-4">
-    <input type="text" id="room-code-input" placeholder="Enter Room Code" class="w-full text-center bg-gray-900/50 border-2 border-gray-600 rounded-lg p-3 focus:border-pink-500 focus:ring-0">
-    <button id="join-game-btn" class="btn w-full sm:w-auto bg-pink-600 font-bold py-3 px-6 rounded-lg text-xl" disabled>Join</button>
-</div>
+                    <div class="flex items-center gap-4">
+                        <input type="text" id="room-code-input" placeholder="Enter Room Code" class="flex-grow text-center bg-gray-900/50 border-2 border-gray-600 rounded-lg p-3 focus:border-pink-500 focus:ring-0">
+                        <button id="join-game-btn" class="btn bg-pink-600 font-bold py-3 px-6 rounded-lg text-xl">Join</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -108,7 +108,7 @@
 
         <!-- Loading Screen -->
         <div id="loading-screen" class="screen">
-            <div class="glass-card rounded-2xl p-6 md:p-8">
+            <div class="glass-card rounded-2xl p-8 text-center">
                 <h2 class="text-3xl font-bold" id="loading-message">Our AI Quizmaster is crafting your challenge...</h2>
                 <p class="text-2xl mt-4" id="loading-timer">10</p>
             </div>
@@ -116,7 +116,7 @@
         
         <!-- Lobby Screen -->
         <div id="lobby-screen" class="screen">
-            <div class="glass-card rounded-2xl p-6 md:p-8">
+            <div class="glass-card rounded-2xl p-8 text-center">
                 <p class="text-gray-400">Game Lobby</p>
                 <h2 class="text-4xl font-bold">Room Code: <span id="room-code-display" class="text-pink-400 font-mono cursor-pointer" title="Click to copy"></span></h2>
                 <p id="copy-feedback" class="text-sm text-green-400 h-5"></p>
@@ -128,7 +128,7 @@
 
         <!-- Round Start Screen -->
         <div id="round-start-screen" class="screen">
-            <div class="glass-card rounded-2xl p-6 md:p-8">
+            <div class="glass-card rounded-2xl p-8 text-center">
                 <h2 id="round-start-title" class="text-4xl font-bold">Get Ready for Round 2!</h2>
                 <p class="text-2xl mt-4" id="round-start-timer">3</p>
             </div>
@@ -136,7 +136,7 @@
 
         <!-- Round End Screen -->
         <div id="round-end-screen" class="screen">
-            <div class="glass-card rounded-2xl p-6 md:p-8 text-center">
+            <div class="glass-card rounded-2xl p-8 text-center">
                 <h2 id="round-end-title" class="text-4xl font-bold">Round 1 Complete!</h2>
                 <p class="text-2xl text-indigo-300 mt-4">Current Standings:</p>
                 <div id="round-end-leaderboard" class="space-y-3 mt-6"></div>
