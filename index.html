@@ -27,10 +27,6 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
         .timer-bar {
             height: 8px;
             background-color: #4ade80;
@@ -50,17 +46,6 @@
           30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
           40%, 60% { transform: translate3d(4px, 0, 0); }
         }
-        .winner-highlight {
-            position: relative;
-            border: 2px solid #fbbF24; /* A gold-like color */
-            box-shadow: 0 0 15px #fde047, 0 0 25px #f59e0b; /* Glowing effect */
-            animation: pulse-gold 1.5s infinite ease-in-out;
-        }
-        @keyframes pulse-gold {
-            0% { transform: scale(1); box-shadow: 0 0 15px #fde047, 0 0 25px #f59e0b; }
-            50% { transform: scale(1.02); box-shadow: 0 0 25px #fde047, 0 0 40px #f59e0b; }
-            100% { transform: scale(1); box-shadow: 0 0 15px #fde047, 0 0 25px #f59e0b; }
-        }
     </style>
 </head>
 <body class="text-white flex items-center justify-center min-h-screen p-4">
@@ -77,10 +62,10 @@
                 <p class="text-indigo-300 mt-2 text-lg">The AI-Powered Quiz Game</p>
                 <div class="mt-8 space-y-4">
                     <input type="text" id="player-name" placeholder="Enter your name" class="w-full text-center bg-gray-900/50 border-2 border-gray-600 rounded-lg p-3 focus:border-indigo-500 focus:ring-0">
-                    <button id="show-create-options-btn" class="btn w-full bg-indigo-600 font-bold py-3 rounded-lg text-xl" disabled>Create Game Room</button>
+                    <button id="show-create-options-btn" class="btn w-full bg-indigo-600 font-bold py-3 rounded-lg text-xl">Create Game Room</button>
                     <div class="flex items-center gap-4">
                         <input type="text" id="room-code-input" placeholder="Enter Room Code" class="flex-grow text-center bg-gray-900/50 border-2 border-gray-600 rounded-lg p-3 focus:border-pink-500 focus:ring-0">
-                        <button id="join-game-btn" class="btn bg-pink-600 font-bold py-3 px-6 rounded-lg text-xl" disabled>Join</button>
+                        <button id="join-game-btn" class="btn bg-pink-600 font-bold py-3 px-6 rounded-lg text-xl">Join</button>
                     </div>
                 </div>
             </div>
@@ -202,14 +187,7 @@
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Config ---
-        const firebaseConfig = {
-  apiKey: "AIzaSyB4FeTJR9xrWs3xh48bYy7aIfbtUcSGudE",
-  authDomain: "brand-blitz-online.firebaseapp.com",
-  projectId: "brand-blitz-online",
-  storageBucket: "brand-blitz-online.firebasestorage.app",
-  messagingSenderId: "197236668233",
-  appId: "1:197236668233:web:c245ccd21525f0846b4c98"
-}; // PASTE YOUR FIREBASE CONFIG HERE
+        const firebaseConfig = {  apiKey: "AIzaSyB4FeTJR9xrWs3xh48bYy7aIfbtUcSGudE",  authDomain: "brand-blitz-online.firebaseapp.com",  projectId: "brand-blitz-online",  storageBucket: "brand-blitz-online.firebasestorage.app",  messagingSenderId: "197236668233",  appId: "1:197236668233:web:c245ccd21525f0846b4c98"};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'topic-tussle-default';
 
         // --- Firebase Initialization ---
@@ -288,12 +266,7 @@
             try {
                 await signInAnonymously(auth);
                 onAuthStateChanged(auth, user => {
-                    if (user) {
-                        currentUser = user;
-                        // Enable buttons once user is signed in
-                        showCreateOptionsBtn.disabled = false;
-                        joinGameBtn.disabled = false;
-                    }
+                    if (user) currentUser = user;
                 });
             } catch (error) {
                 console.error("Error during anonymous sign-in:", error);
@@ -736,4 +709,4 @@
 
     </script>
 </body>
-</html>
+</ht
